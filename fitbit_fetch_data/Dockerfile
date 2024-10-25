@@ -18,13 +18,9 @@ COPY run.sh /app/
 RUN pip install -r requirements.txt
 
 # Setup permissions
-RUN addgroup -S appuser -g 1000 \
-    && adduser -S appuser -u 1000 -G appuser \
-    && chown -R appuser:appuser /app \
-    && chmod +x /app/run.sh
+RUN chmod +x /app/run.sh
 
-USER appuser
-
-RUN ls -la /app
+# Do not switch users
+# USER appuser
 
 CMD [ "/app/run.sh" ]
