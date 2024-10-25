@@ -9,8 +9,10 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apk add --no-cache bashio
-RUN apt-get update && apt-get install -y bash
+RUN apt-get update && apt-get install -y bash curl \
+    && curl -L -o /usr/bin/bashio https://github.com/hassio-addons/bashio/releases/latest/download/bashio \
+    && chmod +x /usr/bin/bashio \
+    && apt-get clean
 
 # Copy all required files
 COPY requirements.txt /app/
