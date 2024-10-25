@@ -9,6 +9,9 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+RUN apk add --no-cache bashio
+RUN apt-get update && apt-get install -y bash
+
 # Copy all required files
 COPY requirements.txt /app/
 COPY Fitbit_Fetch.py /app/
