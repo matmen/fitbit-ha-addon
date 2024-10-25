@@ -7,12 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-WORKDIR /app
+# Install bash
+RUN apt-get update && apt-get install -y bash
 
-RUN apt-get update && apt-get install -y bash curl \
-    && curl -L -o /usr/bin/bashio https://github.com/hassio-addons/bashio/releases/latest/download/bashio \
-    && chmod +x /usr/bin/bashio \
-    && apt-get clean
+WORKDIR /app
 
 # Copy all required files
 COPY requirements.txt /app/

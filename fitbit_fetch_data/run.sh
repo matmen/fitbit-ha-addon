@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bashio
+#!/bin/bash
 
 # Create necessary directories if they don't exist
 mkdir -p /share/fitbit/logs
