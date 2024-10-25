@@ -1,4 +1,8 @@
-FROM python:3.10-slim
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
+
+# Set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -6,23 +10,22 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
 
-# Install pip requirements
+# Install requirements for add-on
+WORKDIR /usr/src/app
 COPY requirements.txt .
-RUN python -m pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
-WORKDIR /app
-COPY ./Fitbit_Fetch.py /app
-COPY ./run.sh /
-COPY ./requirements.txt /app
+# Create necessary directories
+RUN mkdir -p /share/fitbit/logs \
+    && mkdir -p /share/fitbit/tokens \
+    && mkdir -p /app
 
-RUN chmod a+x /run.sh \
-    && mkdir -p /share/fitbit/logs \
-    && mkdir -p /share/fitbit/tokens
+# Copy application files
+COPY Fitbit_Fetch.py /app/
+COPY run.sh /usr/bin/
+RUN chmod a+x /usr/bin/run.sh
 
-RUN groupadd --gid 1000 appuser && \
-    useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser && \
-    chown -R appuser:appuser /app /share/fitbit
+# Switch back to /
+WORKDIR /
 
-USER appuser
-
-CMD ["/run.sh"]
+CMD [ "/usr/bin/run.sh" ]

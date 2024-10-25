@@ -27,8 +27,5 @@ if [ ! -f "$TOKEN_FILE_PATH" ] && [ ! -z "$REFRESH_TOKEN" ]; then
     echo "{\"refresh_token\": \"$REFRESH_TOKEN\", \"access_token\": \"\"}" > "$TOKEN_FILE_PATH"
 fi
 
-# Make sure the files are owned by the appuser
-chown -R appuser:appuser /share/fitbit
-
 # Start the Fitbit Fetch Data script
-python /app/Fitbit_Fetch.py
+python3 /app/Fitbit_Fetch.py
