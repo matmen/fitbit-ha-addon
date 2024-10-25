@@ -10,9 +10,9 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Copy all required files
-COPY fitbit_fetch_data/requirements.txt /app/
-COPY fitbit_fetch_data/Fitbit_Fetch.py /app/
-COPY fitbit_fetch_data/run.sh /app/
+COPY requirements.txt /app/
+COPY Fitbit_Fetch.py /app/
+COPY run.sh /app/
 
 # Install requirements
 RUN python -m pip install -r requirements.txt
