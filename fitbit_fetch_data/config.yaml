@@ -1,5 +1,5 @@
 name: "Fitbit Fetch Data"
-version: "1.0.4"
+version: "1.0.5"
 slug: "fitbit_fetch_data"
 description: "Add-on to fetch Fitbit data and store it in InfluxDB"
 arch:
@@ -8,7 +8,7 @@ arch:
   - armhf
   - armv7
   - i386
-image: "thisisarpanghosh/fitbit-fetch-data"
+image: "python:3.10-slim"
 startup: application
 init: false
 map:
