@@ -1,15 +1,15 @@
 #!/usr/bin/with-contenv bashio
 
-# Create necessary directories
+# Create necessary directories if they don't exist
 mkdir -p /share/fitbit/logs
 mkdir -p /share/fitbit/tokens
 
-# Get config values
+# Set environment variables
 export FITBIT_LOG_FILE_PATH="/share/fitbit/logs/fitbit.log"
 export TOKEN_FILE_PATH="/share/fitbit/tokens/fitbit.token"
 export OVERWRITE_LOG_FILE=True
 
-# Get the config values using bashio
+# Get config values using bashio
 export INFLUXDB_VERSION=$(bashio::config 'influxdb_version')
 export INFLUXDB_HOST=$(bashio::config 'influxdb_host')
 export INFLUXDB_PORT=$(bashio::config 'influxdb_port')
@@ -27,5 +27,8 @@ if [ ! -f "$TOKEN_FILE_PATH" ] && [ ! -z "$REFRESH_TOKEN" ]; then
     echo "{\"refresh_token\": \"$REFRESH_TOKEN\", \"access_token\": \"\"}" > "$TOKEN_FILE_PATH"
 fi
 
+# Make sure the files are owned by the appuser
+chown -R appuser:appuser /share/fitbit
+
 # Start the Fitbit Fetch Data script
-python3 /app/Fitbit_Fetch.py
+python /app/Fitbit_Fetch.py
