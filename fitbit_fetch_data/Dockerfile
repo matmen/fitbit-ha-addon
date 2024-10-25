@@ -1,14 +1,11 @@
 ARG BUILD_FROM
-FROM ${BUILD_FROM}
+FROM $BUILD_FROM
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Turns off buffering for easier container logging
 ENV PYTHONUNBUFFERED=1
-
-# Install bash
-RUN apt-get update && apt-get install -y bash
 
 WORKDIR /app
 
@@ -18,14 +15,16 @@ COPY Fitbit_Fetch.py /app/
 COPY run.sh /app/
 
 # Install requirements
-RUN python -m pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Setup permissions
-RUN groupadd --gid 1000 appuser \
-    && useradd --uid 1000 --gid appuser --shell /bin/sh --create-home appuser \
+RUN addgroup -S appuser -g 1000 \
+    && adduser -S appuser -u 1000 -G appuser \
     && chown -R appuser:appuser /app \
     && chmod +x /app/run.sh
 
 USER appuser
+
+RUN ls -la /app
 
 CMD [ "/app/run.sh" ]
