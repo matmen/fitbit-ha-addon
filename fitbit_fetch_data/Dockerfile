@@ -11,12 +11,22 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN python -m pip install -r requirements.txt
 
-WORKDIR /app
-COPY ./Fitbit_Fetch.py /app
-COPY ./run.sh /
-RUN chmod a+x /run.sh
+# Setup app directory and user
+RUN mkdir -p /app \
+    && mkdir -p /share/fitbit/logs \
+    && mkdir -p /share/fitbit/tokens
 
-RUN groupadd --gid 1000 appuser && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser && chown -R appuser:appuser /app
+WORKDIR /app
+COPY Fitbit_Fetch.py /app/
+COPY run.sh /app/
+
+# Setup permissions
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser \
+    && chown -R appuser:appuser /app /share/fitbit \
+    && chmod a+x /app/run.sh
+
 USER appuser
 
-CMD [ "/run.sh" ]
+# Change CMD to use full path
+CMD [ "/app/run.sh" ]
