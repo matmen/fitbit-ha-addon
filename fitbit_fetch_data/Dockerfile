@@ -22,7 +22,7 @@ RUN python -m pip install -r requirements.txt
 
 # Setup permissions
 RUN groupadd --gid 1000 appuser \
-    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser \
+    && useradd --uid 1000 --gid appuser --shell /bin/sh --create-home appuser \
     && chown -R appuser:appuser /app \
     && chmod +x /app/run.sh
 
