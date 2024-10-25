@@ -1,39 +1,31 @@
-#!/usr/bin/env bash
+#!/usr/bin/with-contenv bashio
 
-# Konfigurationen aus der Add-on Konfiguration auslesen
-REFRESH_TOKEN=$(hassio addon config get refresh_token)
-INFLUXDB_VERSION=$(hassio addon config get influxdb_version)
-INFLUXDB_HOST=$(hassio addon config get influxdb_host)
-INFLUXDB_PORT=$(hassio addon config get influxdb_port)
-INFLUXDB_USERNAME=$(hassio addon config get influxdb_username)
-INFLUXDB_PASSWORD=$(hassio addon config get influxdb_password)
-INFLUXDB_DATABASE=$(hassio addon config get influxdb_database)
-INFLUXDB_BUCKET=$(hassio addon config get influxdb_bucket)
-INFLUXDB_ORG=$(hassio addon config get influxdb_org)
-INFLUXDB_TOKEN=$(hassio addon config get influxdb_token)
-INFLUXDB_URL=$(hassio addon config get influxdb_url)
-CLIENT_ID=$(hassio addon config get client_id)
-CLIENT_SECRET=$(hassio addon config get client_secret)
-DEVICENAME=$(hassio addon config get devicename)
-LOCAL_TIMEZONE=$(hassio addon config get local_timezone)
+# Create necessary directories
+mkdir -p /share/fitbit/logs
+mkdir -p /share/fitbit/tokens
 
-# Umgebungsvariablen setzen
-export FITBIT_LOG_FILE_PATH=/app/logs/fitbit.log
-export TOKEN_FILE_PATH=/app/tokens/fitbit.token
+# Get config values
+export FITBIT_LOG_FILE_PATH="/share/fitbit/logs/fitbit.log"
+export TOKEN_FILE_PATH="/share/fitbit/tokens/fitbit.token"
 export OVERWRITE_LOG_FILE=True
-export INFLUXDB_VERSION
-export INFLUXDB_HOST
-export INFLUXDB_PORT
-export INFLUXDB_USERNAME
-export INFLUXDB_PASSWORD
-export INFLUXDB_DATABASE
-export INFLUXDB_BUCKET
-export INFLUXDB_ORG
-export INFLUXDB_TOKEN
-export INFLUXDB_URL
-export CLIENT_ID
-export CLIENT_SECRET
-export DEVICENAME
-export LOCAL_TIMEZONE
+
+# Get the config values using bashio
+export INFLUXDB_VERSION=$(bashio::config 'influxdb_version')
+export INFLUXDB_HOST=$(bashio::config 'influxdb_host')
+export INFLUXDB_PORT=$(bashio::config 'influxdb_port')
+export INFLUXDB_USERNAME=$(bashio::config 'influxdb_username')
+export INFLUXDB_PASSWORD=$(bashio::config 'influxdb_password')
+export INFLUXDB_DATABASE=$(bashio::config 'influxdb_database')
+export CLIENT_ID=$(bashio::config 'client_id')
+export CLIENT_SECRET=$(bashio::config 'client_secret')
+export DEVICENAME=$(bashio::config 'devicename')
+export LOCAL_TIMEZONE=$(bashio::config 'local_timezone')
+
+# Write initial refresh token if provided
+REFRESH_TOKEN=$(bashio::config 'refresh_token')
+if [ ! -f "$TOKEN_FILE_PATH" ] && [ ! -z "$REFRESH_TOKEN" ]; then
+    echo "{\"refresh_token\": \"$REFRESH_TOKEN\", \"access_token\": \"\"}" > "$TOKEN_FILE_PATH"
+fi
+
 # Start the Fitbit Fetch Data script
-python /app/Fitbit_Fetch.py
+python3 /app/Fitbit_Fetch.py
