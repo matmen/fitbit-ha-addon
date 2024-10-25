@@ -4,6 +4,14 @@ FROM ${BUILD_FROM}
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Install required packages
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    gcc \
+    musl-dev \
+    python3-dev
+
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -13,7 +21,7 @@ ENV PYTHONUNBUFFERED=1
 # Install requirements for add-on
 WORKDIR /usr/src/app
 COPY requirements.txt .
-RUN pip3 install -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Create necessary directories
 RUN mkdir -p /share/fitbit/logs \
