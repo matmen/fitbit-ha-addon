@@ -38,6 +38,6 @@ Die folgenden Konfigurationsoptionen sind verfügbar:
 
 ## Unterstützung
 
-Das Repository ist als Home Assistant Addon von https://github.com/arpanghosh8453/public-fitbit-projects gecloned worden.
+Das Repository ist als Home Assistant Addon von https://github.com/arpanghosh8453/public-fitbit-projects übernommen worden.
 
 Bei Problemen oder Fragen kannst du ein Issue auf GitHub erstellen.

@@ -127,12 +127,12 @@ To check the logs:
 
 ## Support
 
-- For bugs and feature requests, create an issue on [GitHub](https://github.com/yourusername/ha-fitbit-fetch/issues)
+- For bugs and feature requests, create an issue on [GitHub](https://gitlab.fristerspace.de/demian/fitbit-ha-addon/issues)
 - For general questions, use the [Home Assistant Community](https://community.home-assistant.io/)
 
 ## Contributing
 
-This is an open-source project. Feel free to contribute on [GitHub](https://github.com/yourusername/ha-fitbit-fetch).
+This is an open-source project. Feel free to contribute on [GitHub](https://gitlab.fristerspace.de/demian/fitbit-ha-addon).
 
 ## License
 
