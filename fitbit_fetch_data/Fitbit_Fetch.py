@@ -95,9 +95,10 @@ def increment_api_request_count():
 # %%
 # Generic Request caller for all 
 def request_data_from_fitbit(url, headers={}, params={}, data={}, request_type="get"):
-    global ACCESS_TOKEN
+    global ACCESS_TOKEN, api_request_count  # Declare global variables
     retry_attempts = 0
     logging.debug("Requesting data from fitbit via Url : " + url)
+    
     while True:
         if request_type == "get":
             headers = {
@@ -122,15 +123,15 @@ def request_data_from_fitbit(url, headers={}, params={}, data={}, request_type="
                 response = requests.post(url, headers=headers, params=params, data=data)
             else:
                 raise Exception("Invalid request type " + str(request_type))
-        
-            if response.status_code == 200: # Success
+
+            if response.status_code == 200:  # Success
                 return response.json()
-            elif response.status_code == 429: # API Limit reached
+            elif response.status_code == 429:  # API Limit reached
                 retry_after = int(response.headers["Retry-After"]) + 300
                 logging.warning("Fitbit API limit reached. Error code : " + str(response.status_code) + ", Retrying in " + str(retry_after) + " seconds")
                 print("Fitbit API limit reached. Error code : " + str(response.status_code) + ", Retrying in " + str(retry_after) + " seconds")
                 time.sleep(retry_after)
-            elif response.status_code == 401: # Access token expired ( most likely )
+            elif response.status_code == 401:  # Access token expired ( most likely )
                 logging.info("Current Access Token : " + ACCESS_TOKEN)
                 logging.warning("Error code : " + str(response.status_code) + ", Details : " + response.text)
                 print("Error code : " + str(response.status_code) + ", Details : " + response.text)
@@ -140,7 +141,7 @@ def request_data_from_fitbit(url, headers={}, params={}, data={}, request_type="
                 if retry_attempts > EXPIRED_TOKEN_MAX_RETRY:
                     logging.error("Unable to solve the 401 Error. Please debug - " + response.text)
                     raise Exception("Unable to solve the 401 Error. Please debug - " + response.text)
-            elif response.status_code in [500, 502, 503, 504]: # Fitbit server is down or not responding ( most likely ):
+            elif response.status_code in [500, 502, 503, 504]:  # Fitbit server is down or not responding ( most likely ):
                 logging.warning("Server Error encountered ( Code 5xx ): Retrying after 120 seconds....")
                 time.sleep(120)
                 if retry_attempts > SERVER_ERROR_MAX_RETRY:
@@ -149,7 +150,7 @@ def request_data_from_fitbit(url, headers={}, params={}, data={}, request_type="
                         logging.warning("Retry limit reached for server error : Skipping request -> " + url)
                         return None
             else:
-                logging.error("Fitbit API request failed. Status code: " + str(response.status_code) + " " + str(response.text) )
+                logging.error("Fitbit API request failed. Status code: " + str(response.status_code) + " " + str(response.text))
                 print(f"Fitbit API request failed. Status code: {response.status_code}", response.text)
                 response.raise_for_status()
                 return None
@@ -159,6 +160,7 @@ def request_data_from_fitbit(url, headers={}, params={}, data={}, request_type="
             print("Retrying in 5 minutes - Failed to connect to internet : " + str(e))
         retry_attempts += 1
         time.sleep(30)
+
 
 # %% [markdown]
 # ## Token Refresh Management
