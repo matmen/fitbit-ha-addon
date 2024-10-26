@@ -47,7 +47,7 @@ EXPIRED_TOKEN_MAX_RETRY = 5
 SKIP_REQUEST_ON_SERVER_ERROR = True
 
 # Bestimmt die Start- und Enddaten für das automatische Nachladen historischer Daten
-backfill_date = datetime.now(LOCAL_TIMEZONE).date()
+backfill_date = datetime.now(pytz.timezone(LOCAL_TIMEZONE)).date()
 start_backfill_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()  # Startdatum für das Nachladen
 
 
