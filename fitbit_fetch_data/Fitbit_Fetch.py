@@ -247,10 +247,12 @@ def write_points_to_influxdb(points):
 # ## Set Timezone from profile data
 
 # %%
+# Initialize LOCAL_TIMEZONE with a pytz timezone object
 if LOCAL_TIMEZONE == "Automatic":
     LOCAL_TIMEZONE = pytz.timezone(request_data_from_fitbit("https://api.fitbit.com/1/user/-/profile.json")["user"]["timezone"])
 else:
-    LOCAL_TIMEZONE = pytz.timezone(LOCAL_TIMEZONE)
+    LOCAL_TIMEZONE = pytz.timezone(LOCAL_TIMEZONE)  # Ensure LOCAL_TIMEZONE is a timezone object
+
 
 # %% [markdown]
 # ## Selecting Dates for update
