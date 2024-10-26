@@ -13,6 +13,9 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 # %% [markdown]
 # ## Variables
 
+import threading
+
+
 # %%
 FITBIT_LOG_FILE_PATH = os.environ.get("FITBIT_LOG_FILE_PATH") or "your/expected/log/file/location/path"
 TOKEN_FILE_PATH = os.environ.get("TOKEN_FILE_PATH") or "your/expected/token/file/location/path"
@@ -43,6 +46,11 @@ SERVER_ERROR_MAX_RETRY = 3
 EXPIRED_TOKEN_MAX_RETRY = 5
 SKIP_REQUEST_ON_SERVER_ERROR = True
 
+# Bestimmt die Start- und Enddaten für das automatische Nachladen historischer Daten
+backfill_date = datetime.now(LOCAL_TIMEZONE).date()
+start_backfill_date = datetime.strptime("2020-01-01", "%Y-%m-%d").date()  # Startdatum für das Nachladen
+
+
 # %% [markdown]
 # ## Logging setup
 
@@ -59,6 +67,28 @@ logging.basicConfig(
     ]
 )
 
+
+# Variablen für API-Anfrageüberwachung
+api_request_count = 0
+API_REQUEST_LIMIT = 150  # Maximale Anzahl von Anfragen pro Stunde
+api_request_lock = threading.Lock()
+
+def reset_api_request_count():
+    global api_request_count
+    with api_request_lock:
+        api_request_count = 0
+    # Timer zum nächsten Reset in einer Stunde
+    threading.Timer(3600, reset_api_request_count).start()
+
+# Starte den ersten Reset-Timer
+reset_api_request_count()
+
+def increment_api_request_count():
+    global api_request_count
+    with api_request_lock:
+        api_request_count += 1
+
+
 # %% [markdown]
 # ## Setting up base API Caller function
 
@@ -68,14 +98,24 @@ def request_data_from_fitbit(url, headers={}, params={}, data={}, request_type="
     global ACCESS_TOKEN
     retry_attempts = 0
     logging.debug("Requesting data from fitbit via Url : " + url)
-    while True: # Unlimited Retry attempts
+    while True:
         if request_type == "get":
             headers = {
                 "Authorization": f"Bearer {ACCESS_TOKEN}",
                 "Accept": "application/json",
                 'Accept-Language': FITBIT_LANGUAGE
             }
-        try:        
+        try:
+            # Überprüfe API-Anfragebeschränkung
+            with api_request_lock:
+                if api_request_count >= API_REQUEST_LIMIT:
+                    logging.info("API-Anfragelimit erreicht. Warte auf Zurücksetzung.")
+                    time.sleep(60)  # Warte 60 Sekunden bevor erneut geprüft wird
+                    continue
+                else:
+                    api_request_count += 1
+
+            # Anfrage senden
             if request_type == "get":
                 response = requests.get(url, headers=headers, params=params, data=data)
             elif request_type == "post":
@@ -533,6 +573,84 @@ def get_daily_data_limit_none(start_date_str, end_date_str):
     else:
         logging.error("Recording failed : Avg SPO2 for date " + start_date_str + " to " + end_date_str)
 
+def reset_request_count():
+    global api_request_count
+    api_request_count = 0
+
+# Funktion, um auf API-Anfragebeschränkung zu prüfen
+def check_request_limit():
+    global api_request_count
+    if api_request_count >= API_REQUEST_LIMIT:
+        logging.info("API-Anfragelimit erreicht. Warten bis zum Zurücksetzen.")
+        time.sleep(REQUEST_RESET_INTERVAL)  # Wartezeit bis zum nächsten Stundenzähler-Reset
+        reset_request_count()
+    else:
+        api_request_count += 1
+
+def check_data_exists_in_influxdb(measurement, date_str):
+    try:
+        query = f"SELECT * FROM \"{measurement}\" WHERE time >= '{date_str}T00:00:00Z' AND time <= '{date_str}T23:59:59Z' LIMIT 1"
+        if INFLUXDB_VERSION == "1":
+            result = influxdbclient.query(query)
+            points = list(result.get_points())
+            return len(points) > 0
+        elif INFLUXDB_VERSION == "2":
+            query_api = influxdbclient.query_api()
+            query_str = f'from(bucket:"{INFLUXDB_BUCKET}") |> range(start: {date_str}T00:00:00Z, stop: {date_str}T23:59:59Z) |> filter(fn: (r) => r._measurement == "{measurement}") |> limit(n:1)'
+            tables = query_api.query(query_str, org=INFLUXDB_ORG)
+            return any(table.records for table in tables)
+        else:
+            return False
+    except Exception as e:
+        logging.error(f"Fehler beim Prüfen von Daten in InfluxDB: {e}")
+        return False
+
+
+# Existierende Daten prüfen und gezielt fehlende laden
+def check_and_fetch_missing_data(measurement, start_date, end_date, func):
+    # Prüfe auf bereits vorhandene Daten in InfluxDB
+    query = f'SELECT * FROM "{measurement}" WHERE time >= \'{start_date}T00:00:00Z\' AND time <= \'{end_date}T23:59:59Z\''
+    try:
+        existing_data = influxdbclient.query(query)
+        existing_dates = {point['time'][:10] for point in existing_data.get_points()}
+    except Exception as e:
+        logging.error(f"Fehler bei der Datenprüfung in InfluxDB: {e}")
+        existing_dates = set()
+
+    # Lade nur Daten, die noch nicht in InfluxDB vorhanden sind
+    missing_dates = [
+        (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range((end_date - start_date).days + 1)
+        if (start_date + timedelta(days=i)).strftime("%Y-%m-%d") not in existing_dates
+    ]
+
+    for date_str in missing_dates:
+        check_request_limit()
+        func(date_str)  # Ruft die Funktion zur Datenabfrage auf
+
+# Historische Daten in kontrollierten Schritten laden
+def fetch_historical_data(start_date_str, end_date_str):
+    global collected_records
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+    
+    # Schrittweises Laden in 30-Tage-Batches
+    date_ranges = yield_dates_with_gap([(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_date - start_date).days + 1)], 30)
+    
+    for date_range in date_ranges:
+        check_and_fetch_missing_data("HeartRate_Intraday", date_range[0], date_range[1], lambda date: get_intraday_data_limit_1d(date, [('heart', 'HeartRate_Intraday', '1sec')]))
+        check_and_fetch_missing_data("Steps_Intraday", date_range[0], date_range[1], lambda date: get_intraday_data_limit_1d(date, [('steps', 'Steps_Intraday', '1min')]))
+        check_and_fetch_missing_data("HRV", date_range[0], date_range[1], lambda start, end: get_daily_data_limit_30d(start, end))
+        check_and_fetch_missing_data("Sleep Summary", date_range[0], date_range[1], lambda start, end: get_daily_data_limit_100d(start, end))
+        check_and_fetch_missing_data("Activity Minutes", date_range[0], date_range[1], lambda start, end: get_daily_data_limit_365d(start, end))
+
+        # Schreibe nur die neuen Datensätze nach InfluxDB
+        write_points_to_influxdb(collected_records)
+        collected_records = []
+        logging.info(f"Historische Daten für {date_range[0]} bis {date_range[1]} erfolgreich geladen.")
+
+
+
 # Fetches latest activities from record ( upto last 100 )
 def fetch_latest_activities(end_date_str):
     recent_activities_data = request_data_from_fitbit('https://api.fitbit.com/1/user/-/activities/list.json', params={'beforeDate': end_date_str, 'sort':'desc', 'limit':50, 'offset':0})
@@ -646,8 +764,38 @@ if SCHEDULE_AUTO_UPDATE:
         if len(collected_records) != 0:
             write_points_to_influxdb(collected_records)
             collected_records = []
+
+        # Nachladen historischer Daten, wenn API-Limit es zulässt
+        with api_request_lock:
+            remaining_requests = API_REQUEST_LIMIT - api_request_count
+        if remaining_requests > 10:  # Lasse einige Anfragen für geplante Aufgaben übrig
+            if backfill_date >= start_backfill_date:
+                date_str = backfill_date.strftime("%Y-%m-%d")
+                # Prüfe, ob Daten für dieses Datum bereits vorhanden sind
+                data_exists = check_data_exists_in_influxdb("HeartRate_Intraday", date_str)
+                if not data_exists:
+                    # Daten für backfill_date abrufen
+                    get_intraday_data_limit_1d(date_str, [('heart', 'HeartRate_Intraday', '1sec'), ('steps', 'Steps_Intraday', '1min')])
+                    get_daily_data_limit_30d(date_str, date_str)
+                    get_daily_data_limit_100d(date_str, date_str)
+                    get_daily_data_limit_365d(date_str, date_str)
+                    get_daily_data_limit_none(date_str, date_str)
+                    # Gesammelte Daten schreiben
+                    if len(collected_records) != 0:
+                        write_points_to_influxdb(collected_records)
+                        collected_records = []
+                    logging.info(f"Historische Daten für Datum {date_str} nachgeladen.")
+                else:
+                    logging.info(f"Daten für Datum {date_str} bereits in InfluxDB vorhanden.")
+                # Datum um einen Tag verringern
+                backfill_date -= timedelta(days=1)
+            else:
+                logging.info("Nachladen historischer Daten abgeschlossen.")
+                # Optional: Beende das Skript oder setze backfill_date zurück, wenn dauerhaft nachgeladen werden soll
+                # break
+        else:
+            # Warte, bevor erneut geprüft wird
+            time.sleep(60)
+
         time.sleep(30)
         update_working_dates()
-        
-
-
