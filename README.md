@@ -1,43 +1,65 @@
-# Fitbit Fetch Data Add-on für Home Assistant
+# Fitbit Data Integration for Home Assistant
 
-Dieses Add-on ruft Fitbit-Daten ab und speichert sie in einer InfluxDB-Datenbank.
+This Home Assistant add-on fetches data from your Fitbit device and stores it in an InfluxDB database, allowing you to visualize your health and fitness data directly in Home Assistant. This project is based on the excellent [Fitbit Fetch project](https://github.com/arpanghosh8453/public-fitbit-projects) by Arpan Ghosh.
+
+![Fitbit Dashboard Example](https://github.com/arpanghosh8453/public-fitbit-projects/blob/main/Grafana_Dashboard/Dashboard.png?raw=true)
+*Example dashboard visualization (when using with Grafana)*
+
+## Features
+
+- Automatic data collection from Fitbit API
+- Support for both InfluxDB 1.x and 2.x
+- Collects comprehensive health metrics including:
+  - Heart Rate Data (including intraday)
+  - Step Count
+  - Sleep Data
+  - SpO2 Data
+  - Activity Minutes
+  - Battery Level
+  - And more...
+- Automated token refresh
+- Historical data backfilling
+- Rate limit aware data collection
 
 ## Installation
 
-1. Füge dieses Repository zu deinen Home Assistant Add-on Repositories hinzu.
-2. Installiere das "Fitbit Fetch Data" Add-on.
-3. Konfiguriere das Add-on über die Benutzeroberfläche.
-4. Starte das Add-on.
+1. Add this repository to your Home Assistant instance:
+   ```
+   https://gitlab.fristerspace.de/demian/fitbit-ha-addon
+   ```
+2. Navigate to Settings → Add-ons → Add-on Store in Home Assistant
+3. Click the menu (⋮) → Repositories
+4. Install the "Fitbit Fetch Data" add-on
+5. Configure the required options (see Configuration section)
+6. Start the add-on
 
-## Konfiguration
+## Prerequisites
 
-Die folgenden Konfigurationsoptionen sind verfügbar:
+1. A Fitbit Account and Device
+2. A Fitbit Application (for API access)
+   - Create at [dev.fitbit.com](https://dev.fitbit.com)
+   - Set OAuth 2.0 Application Type to "Personal" (required for intraday data access)
+3. An InfluxDB instance accessible from your Home Assistant
 
-* **Refresh Token:** Dein Fitbit Refresh Token.
-* **InfluxDB Version:** Die Version deiner InfluxDB-Datenbank (1 oder 2).
-* **InfluxDB Host:** Der Hostname oder die IP-Adresse deiner InfluxDB-Datenbank.
-* **InfluxDB Port:** Der Port deiner InfluxDB-Datenbank.
-* **InfluxDB Username:** Der Benutzername für deine InfluxDB-Datenbank.
-* **InfluxDB Password:** Das Passwort für deine InfluxDB-Datenbank.
-* **InfluxDB Database:** Der Name der Datenbank in deiner InfluxDB-Instanz.
-* **InfluxDB Bucket:** Der Name des Buckets in deiner InfluxDB 2-Instanz.
-* **InfluxDB Org:** Der Name der Organisation in deiner InfluxDB 2-Instanz.
-* **InfluxDB Token:** Der Token für deine InfluxDB 2-Instanz.
-* **InfluxDB URL:** Die URL deiner InfluxDB 2-Instanz.
-* **Client ID:** Die Client ID deiner Fitbit-Anwendung.
-* **Client Secret:** Der Client Secret deiner Fitbit-Anwendung.
-* **Devicename:** Der Name deines Fitbit-Geräts.
-* **Local Timezone:** Die lokale Zeitzone.
+## Quick Start
 
-## Hinweise
+1. Set up your Fitbit Application at [dev.fitbit.com](https://dev.fitbit.com)
+2. Note down your Client ID and Client Secret
+3. Get your refresh token using the [Fitbit OAuth 2.0 Tutorial](https://dev.fitbit.com/build/reference/web-api/developer-guide/authorization/)
+4. Configure the add-on with your credentials
+5. Start the add-on
 
-* Stelle sicher, dass du eine InfluxDB-Datenbank eingerichtet hast.
-* Du musst eine Fitbit-Anwendung erstellen und die Client ID und den Client Secret in der Add-on-Konfiguration angeben.
-* Der Refresh Token kann über die Fitbit-API abgerufen werden.
-* Die Ordner `logs` und `tokens` werden im Home Assistant-Dateisystem erstellt und müssen dem Benutzer mit der UID 1000 gehören.
+For detailed configuration and troubleshooting, see the [full documentation](DOCS.md).
 
-## Unterstützung
+## Support
 
-Das Repository ist als Home Assistant Addon von https://github.com/arpanghosh8453/public-fitbit-projects übernommen worden.
+- For bugs and feature requests, create an issue on [GitLab](https://gitlab.fristerspace.de/demian/fitbit-ha-addon/issues)
+- For questions about the original Fitbit Fetch project, visit the [GitHub repository](https://github.com/arpanghosh8453/public-fitbit-projects)
 
-Bei Problemen oder Fragen kannst du ein Issue auf GitHub erstellen.
+## License
+
+This project is under the BSD 4-Clause License. See the LICENSE file for details.
+
+## Acknowledgments
+
+This add-on is based on the [Fitbit Fetch project](https://github.com/arpanghosh8453/public-fitbit-projects) by Arpan Ghosh. Special thanks to the original author for creating the foundation for this integration.
