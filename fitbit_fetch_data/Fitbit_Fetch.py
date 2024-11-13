@@ -1,5 +1,17 @@
+# Added missing imports
+import os
+import sys
+import time
+import threading
+import logging
+import schedule
+import requests
+import json
+import base64
+import pytz
+
 # %%
-import base64, requests, schedule, time, json, pytz, logging, os, sys
+import base64, requests, time, json, pytz, logging, os, sys
 from requests.exceptions import ConnectionError
 from datetime import datetime, timedelta
 # for influxdb 1.x
@@ -524,32 +536,56 @@ def get_daily_data_limit_365d(start_date_str, end_date_str):
     HR_zones_data_list = request_data_from_fitbit('https://api.fitbit.com/1/user/-/activities/heart/date/' + start_date_str + '/' + end_date_str + '.json')["activities-heart"]
     if HR_zones_data_list != None:
         for data in HR_zones_data_list:
-            log_time = datetime.fromisoformat(data["dateTime"] + "T" + "00:00:00")
-            utc_time = LOCAL_TIMEZONE.localize(log_time).astimezone(pytz.utc).isoformat()
-            collected_records.append({
+            try:
+                log_time = datetime.fromisoformat(data["dateTime"] + "T" + "00:00:00")
+                utc_time = LOCAL_TIMEZONE.localize(log_time).astimezone(pytz.utc).isoformat()
+                
+                # Safe extraction of heart rate zone data with defaults
+                heart_rate_zones = data.get("value", {}).get("heartRateZones", [])
+                hr_zone_data = {
+                    "Normal": 0,
+                    "Fat Burn": 0,
+                    "Cardio": 0,
+                    "Peak": 0
+                }
+                
+                # Safely get minutes for each zone
+                for zone in heart_rate_zones:
+                    zone_name = zone.get("name", "")
+                    if zone_name in ["Out of Range", "Below Custom"]:
+                        hr_zone_data["Normal"] = zone.get("minutes", 0)
+                    elif zone_name == "Fat Burn":
+                        hr_zone_data["Fat Burn"] = zone.get("minutes", 0)
+                    elif zone_name == "Cardio":
+                        hr_zone_data["Cardio"] = zone.get("minutes", 0)
+                    elif zone_name == "Peak":
+                        hr_zone_data["Peak"] = zone.get("minutes", 0)
+
+                collected_records.append({
                     "measurement": "HR zones",
                     "time": utc_time,
                     "tags": {
                         "Device": DEVICENAME
                     },
-                    "fields": {
-                        "Normal" : data["value"]["heartRateZones"][0]["minutes"],
-                        "Fat Burn" :  data["value"]["heartRateZones"][1]["minutes"],
-                        "Cardio" :  data["value"]["heartRateZones"][2]["minutes"],
-                        "Peak" :  data["value"]["heartRateZones"][3]["minutes"]
-                    }
+                    "fields": hr_zone_data
                 })
-            if "restingHeartRate" in data["value"]:
-                collected_records.append({
-                            "measurement":  "RestingHR",
-                            "time": utc_time,
-                            "tags": {
-                                "Device": DEVICENAME
-                            },
-                            "fields": {
-                                "value": data["value"]["restingHeartRate"]
-                            }
-                        })
+
+                # Handle resting heart rate data
+                if "restingHeartRate" in data.get("value", {}):
+                    collected_records.append({
+                        "measurement": "RestingHR",
+                        "time": utc_time,
+                        "tags": {
+                            "Device": DEVICENAME
+                        },
+                        "fields": {
+                            "value": data["value"]["restingHeartRate"]
+                        }
+                    })
+            except Exception as e:
+                logging.error(f"Error processing heart rate data for date {data.get('dateTime', 'unknown')}: {str(e)}")
+                continue
+
         logging.info("Recorded RHR and HR zones for date " + start_date_str + " to " + end_date_str)
     else:
         logging.error("Recording failed : RHR and HR zones for date " + start_date_str + " to " + end_date_str)
