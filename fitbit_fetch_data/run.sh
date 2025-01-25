@@ -13,6 +13,7 @@ export OVERWRITE_LOG_FILE=True
 export INFLUXDB_VERSION=$(bashio::config 'influxdb_version')
 export INFLUXDB_HOST=$(bashio::config 'influxdb_host')
 export INFLUXDB_PORT=$(bashio::config 'influxdb_port')
+export INFLUXDB_URL=$(bashio::config 'influxdb_url')
 export INFLUXDB_USERNAME=$(bashio::config 'influxdb_username')
 export INFLUXDB_PASSWORD=$(bashio::config 'influxdb_password')
 export INFLUXDB_DATABASE=$(bashio::config 'influxdb_database')
